@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Seuil">
+<title>Seuil Multi — Assistant Kraken Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F14; --panel:#121822; --panel-2:#0F1620; --border:#212B38;
+    --text:#EDEFF2; --muted:#8A93A3;
+    --bull:#33D2A0; --bear:#FF6E5A; --warn:#F5B942;
+    --bull-dim:rgba(51,210,160,0.12); --bear-dim:rgba(255,110,90,0.12); --warn-dim:rgba(245,185,66,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  #app{max-width:760px;margin:0 auto;padding:20px 16px 60px;}
+
+  .brand{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .brand h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-0.01em;}
+  .brand .tag{color:var(--muted);font-size:12px;}
+  .disclaimer{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5;border-left:2px solid var(--border);padding-left:10px;}
+
+  .btn{background:var(--text);color:var(--bg);border:none;border-radius:8px;padding:10px 14px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .btn.win{background:var(--bull);} .btn.loss{background:var(--bear);color:var(--text);}
+  .btn.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--border);}
+
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+  select, input[type=number]{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;}
+  select{flex:1;min-width:100px;}
+  label.field{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);flex:1;min-width:90px;}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:14px;}
+  .panel h2{font-size:12px;color:var(--muted);margin:0 0 12px;font-weight:500;}
+
+  .gauge-track{position:relative;height:10px;border-radius:6px;overflow:hidden;background:var(--bear-dim);display:flex;}
+  .gauge-fail{background:var(--bear);opacity:0.55;} .gauge-safe{flex:1;background:linear-gradient(90deg, rgba(245,185,66,0.5), var(--bull));}
+  .gauge-dot{position:absolute;top:-4px;width:18px;height:18px;border-radius:50%;background:var(--text);border:3px solid var(--bg);transform:translateX(-9px);transition:left 0.3s ease;}
+  .gauge-labels{display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--muted);}
+  .risk-figures{display:flex;justify-content:space-between;margin-top:14px;gap:10px;flex-wrap:wrap;}
+  .risk-figures div{flex:1;min-width:110px;} .risk-figures .val{font-size:18px;font-weight:600;} .risk-figures .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+  .risk-alert{margin-top:12px;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:500;}
+
+  .card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .pair-card{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .15s;}
+  .pair-card.focused{border-color:var(--text);}
+  .pair-card .pc-top{display:flex;justify-content:space-between;align-items:baseline;}
+  .pair-card .pc-name{font-size:13px;font-weight:600;}
+  .pair-card .pc-price{font-size:15px;font-weight:600;margin-top:4px;}
+  .pair-card .pc-change{font-size:11px;margin-top:2px;}
+  .pair-card .pc-change.up{color:var(--bull);} .pair-card .pc-change.down{color:var(--bear);}
+  .pc-badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
+  .pc-badge.buy{background:var(--bull-dim);color:var(--bull);}
+  .pc-badge.sell{background:var(--bear-dim);color:var(--bear);}
+  .pc-badge.hold{background:var(--warn-dim);color:var(--warn);}
+  .pc-badge.pause{background:var(--bear-dim);color:var(--bear);}
+
+  .signal-card{display:flex;align-items:center;gap:14px;}
+  .signal-badge{font-size:15px;font-weight:700;padding:10px 18px;border-radius:10px;white-space:nowrap;}
+  .signal-badge.buy{background:var(--bull-dim);color:var(--bull);}
+  .signal-badge.sell{background:var(--bear-dim);color:var(--bear);}
+  .signal-badge.hold{background:var(--warn-dim);color:var(--warn);}
+  .signal-badge.pause{background:var(--bear-dim);color:var(--bear);}
+  .signal-body{flex:1;} .signal-reason{font-size:13px;color:var(--muted);line-height:1.5;margin-top:2px;}
+  .signal-size{margin-top:12px;font-size:13px;border-top:1px solid var(--border);padding-top:10px;}
+  .signal-size .val{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+
+  .price-row{display:flex;align-items:baseline;justify-content:space-between;}
+  .price-main{font-size:26px;font-weight:600;} .price-change{font-size:14px;font-weight:600;}
+  .price-change.up{color:var(--bull);} .price-change.down{color:var(--bear);}
+  .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);margin-right:6px;}
+  .status-dot.live{background:var(--bull);box-shadow:0 0 0 3px var(--bull-dim);}
+  .status-line{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  canvas{width:100%;display:block;} #chart{height:200px;margin-top:8px;} #rsi{height:60px;margin-top:6px;}
+  .chart-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);margin-top:6px;}
+  .chart-legend span{display:flex;align-items:center;gap:5px;} .chart-legend i{width:9px;height:2px;display:inline-block;}
+
+  .journal-row{display:flex;gap:8px;align-items:flex-end;}
+  .btn-pair{display:flex;gap:8px;margin-top:4px;}
+  .journal-stats{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .journal-stats div{flex:1;min-width:90px;background:var(--panel-2);border-radius:8px;padding:8px 10px;}
+  .journal-stats .val{font-size:16px;font-weight:600;} .journal-stats .lbl{font-size:10px;color:var(--muted);margin-top:2px;}
+
+  .log{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;}
+  .log-item{display:flex;justify-content:space-between;font-size:12px;padding:8px 10px;background:var(--panel-2);border-radius:8px;gap:8px;}
+  .log-item .lt{color:var(--muted);white-space:nowrap;} .log-empty{font-size:12px;color:var(--muted);}
+
+  footer{margin-top:20px;font-size:11px;color:var(--muted);text-align:center;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand"><h1>Seuil Multi</h1><span class="tag mono">Kraken Challenge</span></div>
+    <div class="disclaimer">Compte spot (long-only) : impossible de parier sur une baisse, "vendre" ne fait que clôturer un achat. Analyse technique sur données publiques Kraken — propositions, jamais d'exécution automatique. Ceci n'est pas un conseil financier.</div>
+    <button class="btn ghost" id="btnNotif" style="margin-top:10px;width:100%;">🔔 Activer les alertes sur ce téléphone</button>
+    <div class="risk-alert" id="openBanner" style="display:none;margin-top:10px;background:var(--warn-dim);color:var(--warn);">Le flux en direct ne passe pas dans cet aperçu. Ouvre le fichier dans Safari pour l'activer.</div>
+  </header>
+
+  <div class="panel">
+    <h2>Compte challenge</h2>
+    <div class="row" style="margin-top:0;">
+      <label class="field">Solde actuel ($)<input type="number" id="equityInput" value="1000" step="0.01"></label>
+      <label class="field">Objectif ($)<input type="number" id="targetInput" value="1120" step="0.01"></label>
+      <label class="field">Seuil d'échec ($)<input type="number" id="floorInput" value="970" step="0.01"></label>
+      <label class="field">Risque / trade ($)<input type="number" id="riskPerTradeInput" value="5" step="0.5"></label>
+    </div>
+    <div class="gauge-track" style="margin-top:16px;"><div class="gauge-fail" style="width:14%"></div><div class="gauge-safe"></div><div class="gauge-dot" id="gaugeDot" style="left:14%"></div></div>
+    <div class="gauge-labels"><span id="floorLabel" class="mono">970</span><span id="targetLabel" class="mono">1120</span></div>
+    <div class="risk-figures">
+      <div><div class="val mono" id="pnlVal">—</div><div class="lbl">P&amp;L depuis le départ</div></div>
+      <div><div class="val mono" id="bufferVal">—</div><div class="lbl">Marge avant seuil d'échec</div></div>
+      <div><div class="val mono" id="toTargetVal">—</div><div class="lbl">Reste avant objectif</div></div>
+      <div><div class="val mono" id="lossesLeftVal">—</div><div class="lbl">Trades perdants restants</div></div>
+    </div>
+    <div class="risk-alert" id="riskAlert" style="display:none;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Vue d'ensemble — 5 cryptos</h2>
+    <div class="card-grid" id="cardGrid"></div>
+  </div>
+
+  <div class="panel">
+    <div class="price-row">
+      <div>
+        <div style="font-size:13px;color:var(--muted);" id="focusedName">BTC / USD</div>
+        <div class="price-main mono" id="priceMain">—</div>
+        <div class="status-line"><span class="status-dot" id="statusDot"></span><span id="statusText">Connexion…</span></div>
+      </div>
+      <div class="price-change mono" id="priceChange">—</div>
+    </div>
+    <canvas id="chart"></canvas>
+    <div class="chart-legend"><span><i style="background:#7FA8FF"></i> EMA 9</span><span><i style="background:#C88BFF"></i> EMA 21</span></div>
+    <div id="tradeProgress" style="display:none;margin-top:10px;">
+      <div class="gauge-track"><div class="gauge-fail" style="width:50%;background:var(--bear);opacity:0.4;"></div><div class="gauge-safe" style="background:linear-gradient(90deg, rgba(51,210,160,0.15), var(--bull));"></div><div class="gauge-dot" id="tradeDot" style="left:50%"></div></div>
+      <div class="gauge-labels"><span class="mono" id="tradeSlLabel" style="color:var(--bear);">Stop</span><span class="mono" id="tradeEntryLabel">Entrée</span><span class="mono" id="tradeTpLabel" style="color:var(--bull);">Objectif</span></div>
+    </div>
+    <canvas id="rsi"></canvas>
+    <div id="analysisBlock" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:13px;color:var(--muted);font-style:italic;line-height:1.5;">Analyse en attente des premières données…</div>
+  </div>
+
+  <div class="panel">
+    <h2>Proposition</h2>
+    <div class="signal-card">
+      <div class="signal-badge hold" id="signalBadge">—</div>
+      <div class="signal-body"><div class="signal-reason" id="signalReason">En attente des premières données…</div></div>
+    </div>
+    <div class="signal-size" id="signalSize"></div>
+    <button class="btn" id="btnLock" style="display:none;margin-top:12px;width:100%;">Verrouiller cet achat</button>
+
+    <div id="activeTradeCard" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--muted);">Position ouverte — <span id="activePair"></span></span>
+        <span class="signal-badge" id="activeBadge" style="padding:4px 10px;font-size:12px;"></span>
+      </div>
+      <div class="journal-stats" style="margin-top:10px;">
+        <div><div class="val mono" id="activeEntry">—</div><div class="lbl">Entrée</div></div>
+        <div><div class="val mono" id="activeSL" style="color:var(--bear);">—</div><div class="lbl">Stop loss</div></div>
+        <div><div class="val mono" id="activeTP" style="color:var(--bull);">—</div><div class="lbl">Objectif</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Stop et objectif fixés au verrouillage. Une seule position à la fois, même avec 5 cryptos suivies — reste focus.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Journal des trades</h2>
+    <div class="journal-row"><label class="field">Résultat du trade ($)<input type="number" id="tradeResultInput" step="0.01" placeholder="ex: 4.20"></label></div>
+    <div class="btn-pair"><button class="btn win" id="btnWin" style="flex:1;">Gain</button><button class="btn loss" id="btnLoss" style="flex:1;">Perte</button></div>
+    <div class="journal-stats">
+      <div><div class="val mono" id="jTrades">0</div><div class="lbl">Trades</div></div>
+      <div><div class="val mono" id="jWinrate">—</div><div class="lbl">Taux de réussite</div></div>
+      <div><div class="val mono" id="jNet">$0.00</div><div class="lbl">Net session</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Historique des signaux (session)</h2>
+    <div class="log" id="log"><div class="log-empty">Rien encore.</div></div>
+  </div>
+
+  <footer>Source : flux public Kraken (WebSocket, une seule connexion pour les 5 paires). Aucune clé API requise, aucun ordre n'est passé.</footer>
+</div>
+
+<script>
+const PAIRS = ['BTC/USD','ETH/USD','SOL/USD','DOGE/USD','FLOKI/USD'];
+const REST_PAIR_MAP = {'BTC/USD':'XBTUSD','ETH/USD':'ETHUSD','SOL/USD':'SOLUSD','DOGE/USD':'XDGUSD','FLOKI/USD':'FLOKIUSD'};
+const INTERVAL = 15; // minutes — moins de bruit, cf. discussion stratégie
+const BASE_EQUITY = 1000;
+
+const state = {};
+PAIRS.forEach(p => state[p] = {
+  candles: [], price:null, changePct:null,
+  sigType:'hold', sigLabel:'ATTENTE', sigReason:'En attente des premières données…',
+  sl:null, tp:null, entry:null, lastEntryType:null
+});
+
+let focusedSymbol = PAIRS[0];
+let activeTrade = null;   // {pair, entry, sl, tp}
+let pendingSignal = null; // {pair, entry, sl, tp} for the focused pair
+let lastExitType = 'hold';
+let journal = { wins:0, losses:0, net:0 };
+let ws = null;
+let connectFailures = 0;
+
+const el = id => document.getElementById(id);
+const cardGrid = el('cardGrid');
+const openBanner = el('openBanner');
+const statusDot = el('statusDot'), statusText = el('statusText');
+const priceMain = el('priceMain'), priceChange = el('priceChange'), focusedName = el('focusedName');
+const signalBadge = el('signalBadge'), signalReason = el('signalReason'), signalSize = el('signalSize');
+const btnLock = el('btnLock');
+const activeTradeCard = el('activeTradeCard'), activePair = el('activePair'), activeBadge = el('activeBadge');
+const activeEntry = el('activeEntry'), activeSL = el('activeSL'), activeTP = el('activeTP');
+const equityInput = el('equityInput'), targetInput = el('targetInput'), floorInput = el('floorInput'), riskPerTradeInput = el('riskPerTradeInput');
+const gaugeDot = el('gaugeDot'), floorLabel = el('floorLabel'), targetLabel = el('targetLabel');
+const pnlVal = el('pnlVal'), bufferVal = el('bufferVal'), toTargetVal = el('toTargetVal'), lossesLeftVal = el('lossesLeftVal');
+const riskAlert = el('riskAlert');
+const tradeResultInput = el('tradeResultInput'), btnWin = el('btnWin'), btnLoss = el('btnLoss');
+const jTrades = el('jTrades'), jWinrate = el('jWinrate'), jNet = el('jNet');
+const logEl = el('log');
+const btnNotif = el('btnNotif');
+
+function fmt(n,d=2){ return Number(n).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function priceFmt(v){ return v<1 ? v.toFixed(6) : fmt(v, v<100?4:2); }
+
+// ---------- Indicators ----------
+function computeEMA(values, period){
+  const k=2/(period+1); const out=[]; let ema=values[0];
+  for(let i=0;i<values.length;i++){ ema = i===0?values[0]:values[i]*k+ema*(1-k); out.push(ema); }
+  return out;
+}
+function computeRSI(values, period=14){
+  const out=new Array(values.length).fill(50); let gains=0, losses=0;
+  for(let i=1;i<values.length;i++){
+    const diff=values[i]-values[i-1];
+    if(i<=period){
+      if(diff>=0) gains+=diff; else losses-=diff;
+      if(i===period){ const rs=losses===0?100:gains/period/(losses/period); out[i]=100-(100/(1+rs)); }
+    } else {
+      const gain=diff>0?diff:0, loss=diff<0?-diff:0;
+      gains=(gains*(period-1)+gain)/period; losses=(losses*(period-1)+loss)/period;
+      const rs=losses===0?100:gains/losses; out[i]=100-(100/(1+rs));
+    }
+  }
+  return out;
+}
+function computeATR(candlesArr, period=14){
+  const trs=[];
+  for(let i=1;i<candlesArr.length;i++){
+    const c=candlesArr[i], p=candlesArr[i-1];
+    trs.push(Math.max(c.high-c.low, Math.abs(c.high-p.close), Math.abs(c.low-p.close)));
+  }
+  if(!trs.length) return 0;
+  const n=Math.min(period, trs.length);
+  return trs.slice(-n).reduce((a,b)=>a+b,0)/n;
+}
+
+// ---------- Per-pair signal computation (spot, long-only) ----------
+function computeSignalFor(pair){
+  const s = state[pair];
+  const candles = s.candles;
+  if(candles.length<6) return;
+  const closes = candles.map(c=>c.close);
+  const emaFast = Math.min(9, Math.max(2, closes.length-1));
+  const emaSlow = Math.min(21, Math.max(3, closes.length-1));
+  const ema9 = computeEMA(closes, emaFast), ema21 = computeEMA(closes, emaSlow);
+  const rsi = computeRSI(closes, Math.min(14, closes.length-1));
+  const i = closes.length-1;
+  const bullish = ema9[i] > ema21[i];
+  const crossedNow = (ema9[i-1]-ema21[i-1])*(ema9[i]-ema21[i]) < 0;
+  const rsiVal = rsi[i];
+  const earlyStage = closes.length < 25;
+
+  const equity = parseFloat(equityInput.value)||BASE_EQUITY;
+  const floor = parseFloat(floorInput.value)||970;
+  const target = parseFloat(targetInput.value)||1120;
+  const riskPerTrade = parseFloat(riskPerTradeInput.value)||5;
+  const buffer = equity-floor;
+  const lossesLeft = riskPerTrade>0 ? Math.floor(buffer/riskPerTrade) : 0;
+  const nearTarget = equity >= target-20;
+
+  let type='hold', label='ATTENTE', reason='';
+  if(buffer<=10 || lossesLeft<=2){
+    type='pause'; label='PAUSE';
+    reason = lossesLeft<=2
+      ? "Discipline : "+Math.max(0,lossesLeft)+" trade(s) perdant(s) restant(s) — on arrête pour aujourd'hui."
+      : "Marge quasi épuisée avant le seuil d'échec.";
+  } else if(bullish && rsiVal<70){
+    type='buy'; label='ACHAT';
+    reason = crossedNow
+      ? "Croisement EMA9/EMA21 haussier, RSI ("+rsiVal.toFixed(0)+") pas encore suracheté."
+      : "Tendance courte haussière confirmée, RSI ("+rsiVal.toFixed(0)+") neutre.";
+  } else if(!bullish){
+    type='hold'; label='ATTENTE';
+    reason = "Tendance baissière — en spot, pas d'achat tant que ça ne se retourne pas.";
+  } else if(rsiVal>=70){
+    type='hold'; label='ATTENTE'; reason="RSI en surachat ("+rsiVal.toFixed(0)+") — risque de retournement.";
+  } else if(rsiVal<=30){
+    type='hold'; label='ATTENTE'; reason="RSI en survente ("+rsiVal.toFixed(0)+") — laisser le rebond se confirmer.";
+  } else {
+    reason = "Pas de signal net (range).";
+  }
+
+  s.lastEntryType = s.lastEntryType===undefined ? null : s.lastEntryType;
+  if(type==='buy' && s.lastEntryType!=='buy'){
+    notify(pair+' — Signal ACHAT', reason);
+  }
+  s.lastEntryType = type;
+
+  if(type==='buy'){
+    const lastClose = closes[i];
+    const atr = computeATR(candles,14);
+    const sl = lastClose-atr*1.5, tp = lastClose+atr*2.5;
+    s.sl=sl; s.tp=tp; s.entry=lastClose;
+  } else { s.sl=null; s.tp=null; s.entry=null; }
+
+  s.sigType=type; s.sigLabel=label;
+  s.sigReason=(earlyStage?'Historique court — ':'')+reason;
+}
+
+// ---------- Rendering: overview cards ----------
+function renderCards(){
+  cardGrid.innerHTML='';
+  PAIRS.forEach(pair=>{
+    const s = state[pair];
+    const card = document.createElement('div');
+    card.className = 'pair-card'+(pair===focusedSymbol?' focused':'');
+    const name = pair.split('/')[0];
+    const price = s.price!=null ? priceFmt(s.price) : '—';
+    const chg = s.changePct!=null ? (s.changePct>=0?'+':'')+s.changePct.toFixed(2)+'%' : '—';
+    const chgClass = s.changePct>=0 ? 'up' : 'down';
+    card.innerHTML =
+      '<div class="pc-top"><span class="pc-name">'+name+'</span></div>'+
+      '<div class="pc-price mono">'+price+'</div>'+
+      '<div class="pc-change mono '+chgClass+'">'+chg+'</div>'+
+      '<div class="pc-badge '+s.sigType+'">'+s.sigLabel+'</div>';
+    card.addEventListener('click', ()=>{ focusedSymbol=pair; renderCards(); renderDetail(); });
+    cardGrid.appendChild(card);
+  });
+}
+
+// ---------- Chart ----------
+function drawChart(){
+  const s = state[focusedSymbol];
+  const canvas = el('chart'); const dpr=window.devicePixelRatio||1;
+  const w=canvas.clientWidth, h=200;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+  if(s.candles.length<2) return;
+  const visible = s.candles.slice(-80);
+  const highs=visible.map(c=>c.high), lows=visible.map(c=>c.low);
+  let max=Math.max(...highs), min=Math.min(...lows);
+
+  // Si un trade en attente ou actif existe sur cette paire, étendre l'échelle pour inclure stop/objectif
+  const levels = getTradeLevels();
+  if(levels){
+    max = Math.max(max, levels.tp, levels.entry);
+    min = Math.min(min, levels.sl, levels.entry);
+  }
+
+  const pad=(max-min)*0.08 || max*0.001;
+  const top=max+pad, bottom=min-pad;
+  const scaleY = v => h-((v-bottom)/(top-bottom))*h;
+  const cw = w/visible.length;
+  visible.forEach((c,i)=>{
+    const x=i*cw+cw/2, up=c.close>=c.open;
+    ctx.strokeStyle=up?'#33D2A0':'#FF6E5A'; ctx.fillStyle=up?'#33D2A0':'#FF6E5A'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x,scaleY(c.high)); ctx.lineTo(x,scaleY(c.low)); ctx.stroke();
+    const bt=scaleY(Math.max(c.open,c.close)), bb=scaleY(Math.min(c.open,c.close));
+    ctx.fillRect(x-cw*0.32, bt, cw*0.64, Math.max(1,bb-bt));
+  });
+  const closes=s.candles.map(c=>c.close);
+  drawLine(ctx, computeEMA(closes,9).slice(-80), scaleY, cw, '#7FA8FF');
+  drawLine(ctx, computeEMA(closes,21).slice(-80), scaleY, cw, '#C88BFF');
+
+  if(levels){
+    drawLevelLine(ctx, w, scaleY(levels.sl), '#FF6E5A', 'Stop '+priceFmt(levels.sl));
+    drawLevelLine(ctx, w, scaleY(levels.tp), '#33D2A0', 'Objectif '+priceFmt(levels.tp));
+    drawLevelLine(ctx, w, scaleY(levels.entry), '#8A93A3', 'Entrée '+priceFmt(levels.entry));
+  }
+}
+function drawLevelLine(ctx, w, y, color, label){
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle=color; ctx.font='10px "IBM Plex Mono", monospace'; ctx.textBaseline='bottom';
+  ctx.fillText(label, 4, y-2);
+  ctx.restore();
+}
+function getTradeLevels(){
+  if(activeTrade && activeTrade.pair===focusedSymbol){
+    return {sl:activeTrade.sl, tp:activeTrade.tp, entry:activeTrade.entry};
+  }
+  if(pendingSignal && pendingSignal.pair===focusedSymbol){
+    return {sl:pendingSignal.sl, tp:pendingSignal.tp, entry:pendingSignal.entry};
+  }
+  return null;
+}
+function drawLine(ctx, series, scaleY, cw, color){
+  ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.beginPath();
+  series.forEach((v,i)=>{ const x=i*cw+cw/2, y=scaleY(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.stroke();
+}
+function drawRSI(){
+  const s = state[focusedSymbol];
+  if(s.candles.length<6) return;
+  const rsiSeries = computeRSI(s.candles.map(c=>c.close), Math.min(14, s.candles.length-1));
+  const canvas=el('rsi'); const dpr=window.devicePixelRatio||1;
+  const w=canvas.clientWidth, h=60;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+  const visible=rsiSeries.slice(-80); if(visible.length<2) return;
+  const scaleY = v => h-(v/100)*h;
+  ctx.strokeStyle='#212B38'; ctx.lineWidth=1;
+  [30,50,70].forEach(l=>{ ctx.beginPath(); ctx.moveTo(0,scaleY(l)); ctx.lineTo(w,scaleY(l)); ctx.stroke(); });
+  const cw=w/visible.length;
+  ctx.strokeStyle='#F5B942'; ctx.lineWidth=1.5; ctx.beginPath();
+  visible.forEach((v,i)=>{ const x=i*cw+cw/2,y=scaleY(v); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.stroke();
+}
+
+// ---------- Detail panel ----------
+function updateTradeProgress(){
+  const box = el('tradeProgress');
+  const levels = getTradeLevels();
+  if(!levels){ box.style.display='none'; return; }
+  box.style.display='block';
+  const s = state[focusedSymbol];
+  const price = s.price!=null ? s.price : levels.entry;
+  const pct = Math.max(0, Math.min(100, ((price - levels.sl) / (levels.tp - levels.sl)) * 100));
+  el('tradeDot').style.left = pct+'%';
+  el('tradeSlLabel').textContent = 'Stop '+priceFmt(levels.sl);
+  el('tradeEntryLabel').textContent = 'Entrée '+priceFmt(levels.entry);
+  el('tradeTpLabel').textContent = 'Objectif '+priceFmt(levels.tp);
+}
+
+function generateAnalysis(pair){
+  const s = state[pair];
+  const candles = s.candles;
+  if(candles.length<6) return 'Analyse en attente des premières données…';
+  const closes = candles.map(c=>c.close);
+  const i = closes.length-1;
+  const emaFast = Math.min(9, Math.max(2, closes.length-1));
+  const emaSlow = Math.min(21, Math.max(3, closes.length-1));
+  const ema9 = computeEMA(closes, emaFast), ema21 = computeEMA(closes, emaSlow);
+  const rsi = computeRSI(closes, Math.min(14, closes.length-1));
+  const rsiVal = rsi[i];
+  const atr = computeATR(candles, 14);
+  const price = closes[i];
+  const spread = Math.abs(ema9[i]-ema21[i])/price*100;
+
+  // Tendance
+  let trendTxt;
+  if(ema9[i]>ema21[i] && spread>0.3) trendTxt = "tendance haussière marquée";
+  else if(ema9[i]>ema21[i]) trendTxt = "légère tendance haussière";
+  else if(ema9[i]<ema21[i] && spread>0.3) trendTxt = "tendance baissière marquée";
+  else if(ema9[i]<ema21[i]) trendTxt = "légère tendance baissière";
+  else trendTxt = "marché sans direction claire";
+
+  // Momentum
+  let momentumTxt;
+  if(rsiVal>=70) momentumTxt = "en zone de surachat (RSI "+rsiVal.toFixed(0)+") — risque de pause ou de repli";
+  else if(rsiVal<=30) momentumTxt = "en zone de survente (RSI "+rsiVal.toFixed(0)+") — un rebond technique est possible";
+  else if(rsiVal>55) momentumTxt = "momentum positif (RSI "+rsiVal.toFixed(0)+")";
+  else if(rsiVal<45) momentumTxt = "momentum faible (RSI "+rsiVal.toFixed(0)+")";
+  else momentumTxt = "momentum neutre (RSI "+rsiVal.toFixed(0)+")";
+
+  // Volatilité
+  const atrPct = (atr/price)*100;
+  let volTxt;
+  if(atrPct>2) volTxt = "volatilité élevée — mouvements amples, stops plus larges nécessaires";
+  else if(atrPct>0.6) volTxt = "volatilité modérée";
+  else volTxt = "volatilité faible — mouvements resserrés";
+
+  // Position dans la fourchette récente
+  const recent = candles.slice(-50);
+  const rHigh = Math.max(...recent.map(c=>c.high));
+  const rLow = Math.min(...recent.map(c=>c.low));
+  const posPct = rHigh>rLow ? ((price-rLow)/(rHigh-rLow))*100 : 50;
+  let posTxt;
+  if(posPct>=85) posTxt = "teste la zone haute de sa fourchette récente — résistance à surveiller";
+  else if(posPct<=15) posTxt = "proche du plancher de sa fourchette récente — support à surveiller";
+  else posTxt = "évolue dans le milieu de sa fourchette récente";
+
+  return pair+' est en '+trendTxt+', avec un '+momentumTxt+'. '+
+    'Le marché '+posTxt+', dans un contexte de '+volTxt+'.';
+}
+
+function updateAnalysis(){
+  el('analysisBlock').textContent = generateAnalysis(focusedSymbol);
+}
+
+function renderDetail(){
+  const s = state[focusedSymbol];
+  focusedName.textContent = focusedSymbol;
+  priceMain.textContent = s.price!=null ? priceFmt(s.price) : '—';
+  priceChange.textContent = s.changePct!=null ? (s.changePct>=0?'+':'')+s.changePct.toFixed(2)+'%' : '—';
+  priceChange.className = 'price-change mono '+(s.changePct>=0?'up':'down');
+
+  if(activeTrade && activeTrade.pair===focusedSymbol){
+    drawChart(); drawRSI(); updateTradeProgress(); updateAnalysis();
+    renderActiveTrade();
+    return;
+  }
+  activeTradeCard.style.display='none';
+
+  signalBadge.className='signal-badge '+s.sigType;
+  signalBadge.textContent=s.sigLabel;
+  signalReason.textContent=s.sigReason;
+
+  if(s.sigType==='buy' && !activeTrade){
+    const equity=parseFloat(equityInput.value)||BASE_EQUITY;
+    const target=parseFloat(targetInput.value)||1120;
+    const nearTarget = equity>=target-20;
+    const desired=parseFloat(riskPerTradeInput.value)||5;
+    const floor=parseFloat(floorInput.value)||970;
+    const buffer=equity-floor;
+    const capped = nearTarget?Math.min(desired,2.5):desired;
+    const suggested = Math.max(0, Math.min(buffer*0.25, capped));
+    const slPct=((s.sl-s.entry)/s.entry)*100, tpPct=((s.tp-s.entry)/s.entry)*100;
+    signalSize.innerHTML =
+      (nearTarget?'<div style="color:var(--warn);margin-bottom:6px;">Proche de l\'objectif — risque réduit automatiquement.</div>':'')+
+      'Montant suggéré : <span class="val">$'+fmt(suggested,2)+'</span> ('+fmt((suggested/equity)*100,1)+'% du solde)<br>'+
+      '<span style="color:var(--bear);font-weight:600;">Stop loss : '+priceFmt(s.sl)+' ('+fmt(slPct,2)+'%)</span> · '+
+      '<span style="color:var(--bull);font-weight:600;">Objectif : '+priceFmt(s.tp)+' (+'+fmt(Math.abs(tpPct),2)+'%)</span>';
+    pendingSignal = {pair:focusedSymbol, entry:s.entry, sl:s.sl, tp:s.tp};
+    btnLock.style.display = activeTrade ? 'none' : 'block';
+  } else {
+    signalSize.innerHTML = activeTrade ? '<span style="color:var(--muted);">Position en cours sur '+activeTrade.pair+' — clôture-la avant d\'en ouvrir une autre.</span>' : '';
+    pendingSignal=null; btnLock.style.display='none';
+  }
+  drawChart(); drawRSI(); updateTradeProgress(); updateAnalysis();
+}
+
+function renderActiveTrade(){
+  activeTradeCard.style.display='block';
+  btnLock.style.display='none';
+  activePair.textContent = activeTrade.pair;
+  const s = state[activeTrade.pair];
+  const price = s.price || activeTrade.entry;
+  let exitType='hold', exitLabel='GARDE', exitReason="Position en cours — ni le stop ni l'objectif ne sont atteints.";
+  if(price<=activeTrade.sl){ exitType='sell'; exitLabel='VENDS'; exitReason="Stop loss touché ("+priceFmt(activeTrade.sl)+") — coupe la position."; }
+  else if(price>=activeTrade.tp){ exitType='buy'; exitLabel='VENDS'; exitReason="Objectif atteint ("+priceFmt(activeTrade.tp)+") — prends le profit."; }
+
+  signalBadge.className='signal-badge '+(exitType==='sell'?'sell':(exitType==='buy'?'buy':'hold'));
+  signalBadge.textContent=exitLabel;
+  signalReason.textContent=exitReason;
+  signalSize.innerHTML='';
+
+  if(exitType!=='hold' && lastExitType==='hold'){ notify(activeTrade.pair+' — '+exitLabel, exitReason); addLog(activeTrade.pair+' — '+exitLabel, exitReason); }
+  lastExitType = exitType;
+
+  activeBadge.className='signal-badge buy'; activeBadge.textContent='ACHETÉ';
+  activeEntry.textContent=priceFmt(activeTrade.entry);
+  activeSL.textContent=priceFmt(activeTrade.sl);
+  activeTP.textContent=priceFmt(activeTrade.tp);
+}
+
+btnLock.addEventListener('click', ()=>{
+  if(!pendingSignal || activeTrade) return;
+  activeTrade = {...pendingSignal};
+  lastExitType='hold';
+  renderDetail();
+});
+
+// ---------- Risk panel ----------
+function updateRisk(){
+  const equity=parseFloat(equityInput.value)||BASE_EQUITY;
+  const target=parseFloat(targetInput.value)||1120;
+  const floor=parseFloat(floorInput.value)||970;
+  floorLabel.textContent='$'+fmt(floor,0); targetLabel.textContent='$'+fmt(target,0);
+  const pct=Math.max(0,Math.min(1,(equity-floor)/(target-floor)));
+  gaugeDot.style.left=(pct*100)+'%';
+  const pnl=equity-BASE_EQUITY;
+  pnlVal.textContent=(pnl>=0?'+':'')+'$'+fmt(pnl,2); pnlVal.style.color=pnl>=0?'var(--bull)':'var(--bear)';
+  const buffer=equity-floor;
+  bufferVal.textContent='$'+fmt(buffer,2);
+  bufferVal.style.color = buffer<=15?'var(--bear)':(buffer<=25?'var(--warn)':'var(--text)');
+  toTargetVal.textContent='$'+fmt(Math.max(0,target-equity),2);
+  const riskPerTrade=parseFloat(riskPerTradeInput.value)||5;
+  const lossesLeft = riskPerTrade>0 ? Math.floor(buffer/riskPerTrade) : 0;
+  lossesLeftVal.textContent=Math.max(0,lossesLeft);
+  lossesLeftVal.style.color = lossesLeft<=1?'var(--bear)':(lossesLeft<=3?'var(--warn)':'var(--text)');
+  if(buffer<=10){ riskAlert.style.display='block'; riskAlert.style.background='var(--bear-dim)'; riskAlert.style.color='var(--bear)';
+    riskAlert.textContent="Marge critique : $"+fmt(buffer,2)+" avant le seuil d'échec. Stoppe les nouvelles positions.";
+  } else if(buffer<=20){ riskAlert.style.display='block'; riskAlert.style.background='var(--warn-dim)'; riskAlert.style.color='var(--warn)';
+    riskAlert.textContent="Marge réduite ($"+fmt(buffer,2)+") — réduis la taille de tes prochains trades.";
+  } else { riskAlert.style.display='none'; }
+}
+
+// ---------- Journal ----------
+function recordTrade(sign){
+  let amount=Math.abs(parseFloat(tradeResultInput.value));
+  if(isNaN(amount)) amount=parseFloat(riskPerTradeInput.value)||5;
+  const delta=sign*amount;
+  const newEquity=(parseFloat(equityInput.value)||BASE_EQUITY)+delta;
+  equityInput.value=newEquity.toFixed(2);
+  if(sign>0) journal.wins++; else journal.losses++;
+  journal.net+=delta;
+  const total=journal.wins+journal.losses;
+  jTrades.textContent=total;
+  jWinrate.textContent = total>0 ? fmt((journal.wins/total)*100,0)+'%' : '—';
+  jNet.textContent=(journal.net>=0?'+':'')+'$'+fmt(journal.net,2);
+  jNet.style.color=journal.net>=0?'var(--bull)':'var(--bear)';
+  const pairLabel = activeTrade ? activeTrade.pair : focusedSymbol;
+  addLog(pairLabel+' — '+(sign>0?'GAIN':'PERTE'), (sign>0?'+':'-')+'$'+fmt(amount,2)+' — solde $'+fmt(newEquity,2));
+  tradeResultInput.value='';
+  activeTrade=null; activeTradeCard.style.display='none'; lastExitType='hold';
+  updateRisk(); renderDetail();
+}
+btnWin.addEventListener('click', ()=>recordTrade(1));
+btnLoss.addEventListener('click', ()=>recordTrade(-1));
+
+function addLog(label, reason){
+  if(logEl.querySelector('.log-empty')) logEl.innerHTML='';
+  const item=document.createElement('div'); item.className='log-item';
+  const time=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  item.innerHTML='<span>'+label+' — '+reason.slice(0,50)+(reason.length>50?'…':'')+'</span><span class="lt mono">'+time+'</span>';
+  logEl.prepend(item);
+  while(logEl.children.length>30) logEl.removeChild(logEl.lastChild);
+}
+
+[equityInput,targetInput,floorInput,riskPerTradeInput].forEach(i=>i.addEventListener('input', ()=>{ updateRisk(); PAIRS.forEach(computeSignalFor); renderCards(); renderDetail(); }));
+window.addEventListener('resize', drawChart);
+
+// ---------- Notifications ----------
+function updateNotifBtn(){
+  if(!('Notification' in window)){ btnNotif.textContent='🔕 Notifications non supportées'; btnNotif.disabled=true; return; }
+  if(Notification.permission==='granted') btnNotif.textContent='🔔 Alertes activées';
+  else if(Notification.permission==='denied') btnNotif.textContent='🔕 Alertes bloquées (Réglages > Safari)';
+  else btnNotif.textContent='🔔 Activer les alertes sur ce téléphone';
+}
+btnNotif.addEventListener('click', async ()=>{
+  if(!('Notification' in window)) return;
+  try{ const perm = await Notification.requestPermission(); updateNotifBtn();
+    if(perm==='granted') notify('Seuil Multi','Alertes activées pour les 5 cryptos suivies.');
+  }catch(e){}
+});
+function notify(title, body){
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  try{ new Notification(title, {body}); }catch(e){}
+}
+updateNotifBtn();
+
+// ---------- History prefetch (REST, best-effort) ----------
+async function fetchHistory(pair){
+  const restPair = REST_PAIR_MAP[pair];
+  if(!restPair) return;
+  try{
+    const res = await fetch('https://api.kraken.com/0/public/OHLC?pair='+restPair+'&interval='+INTERVAL);
+    const json = await res.json();
+    if(!json || !json.result) return;
+    const key = Object.keys(json.result).find(k=>k!=='last');
+    const rows = (key && json.result[key]) || [];
+    if(!rows.length) return;
+    state[pair].candles = rows.map(r=>({time:new Date(r[0]*1000).toISOString(), open:+r[1], high:+r[2], low:+r[3], close:+r[4]})).slice(-150);
+    computeSignalFor(pair); renderCards(); if(pair===focusedSymbol) renderDetail();
+  }catch(e){ /* silencieux — le WS prendra le relais */ }
+}
+
+// ---------- Kraken WebSocket (une connexion, 5 paires) ----------
+function connect(){
+  if(ws){ try{ws.close();}catch(e){} }
+  statusDot.className='status-dot'; statusText.textContent='Connexion…';
+  PAIRS.forEach(fetchHistory);
+
+  try{ ws = new WebSocket('wss://ws.kraken.com/v2'); }
+  catch(err){ handleConnectFailure(); return; }
+
+  ws.onopen = () => {
+    connectFailures=0; openBanner.style.display='none';
+    try{
+      ws.send(JSON.stringify({method:'subscribe', params:{channel:'ohlc', symbol:PAIRS, interval:INTERVAL}}));
+      ws.send(JSON.stringify({method:'subscribe', params:{channel:'ticker', symbol:PAIRS}}));
+    }catch(err){ handleConnectFailure(); }
+  };
+
+  ws.onmessage = (ev) => {
+    let msg; try{ msg=JSON.parse(ev.data); }catch(e){ return; }
+    if(msg.channel==='ohlc' && msg.data){
+      statusDot.className='status-dot live'; statusText.textContent='Flux en direct';
+      msg.data.forEach(d=>{
+        const pair = d.symbol; if(!state[pair]) return;
+        const c = {time:d.interval_begin, open:+d.open, high:+d.high, low:+d.low, close:+d.close};
+        const arr = state[pair].candles;
+        const idx = arr.findIndex(x=>x.time===c.time);
+        if(idx>=0) arr[idx]=c; else arr.push(c);
+        arr.sort((a,b)=> new Date(a.time)-new Date(b.time));
+        if(arr.length>200) state[pair].candles = arr.slice(-200);
+        computeSignalFor(pair);
+      });
+      renderCards();
+      if(state[focusedSymbol]) { drawChart(); drawRSI(); updateTradeProgress(); updateAnalysis(); if(activeTrade && activeTrade.pair===focusedSymbol) renderActiveTrade(); else renderDetail(); }
+    }
+    if(msg.channel==='ticker' && msg.data){
+      msg.data.forEach(t=>{
+        const pair=t.symbol; if(!state[pair]) return;
+        state[pair].price = +t.last; state[pair].changePct = +t.change_pct;
+      });
+      renderCards();
+      const fs = state[focusedSymbol];
+      if(fs){
+        priceMain.textContent = fs.price!=null?priceFmt(fs.price):'—';
+        priceChange.textContent = fs.changePct!=null?((fs.changePct>=0?'+':'')+fs.changePct.toFixed(2)+'%'):'—';
+        priceChange.className='price-change mono '+(fs.changePct>=0?'up':'down');
+      }
+      if(activeTrade) renderActiveTrade();
+      updateTradeProgress();
+    }
+  };
+
+  ws.onclose = () => { handleConnectFailure(); setTimeout(connect, 4000); };
+  ws.onerror = () => { statusText.textContent='Erreur réseau — nouvelle tentative…'; };
+}
+function handleConnectFailure(){
+  connectFailures++;
+  statusDot.className='status-dot'; statusText.textContent='Déconnecté — reconnexion…';
+  if(connectFailures>=2) openBanner.style.display='block';
+}
+window.addEventListener('error', handleConnectFailure);
+
+updateRisk();
+renderCards();
+renderDetail();
+connect();
+</script>
+</body>
+</html>
